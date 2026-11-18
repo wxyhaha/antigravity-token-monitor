@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Token &amp; TPS Monitor</title>
+  <script src="/preload.js"></script>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="topbar-head">
+        <div class="brand">
+          <span class="brand-title">Token &amp; TPS</span>
+          <span id="model-pill" class="model-pill" title="当前对话最近使用的模型">—</span>
+        </div>
+        <div id="live-badge" class="live-badge" role="status" title="每 1.5 秒自动刷新">
+          <span class="live-dot" aria-hidden="true"></span>
+          <span id="live-text">实时监控</span>
+        </div>
+      </div>
+
+      <div class="conv-row">
+        <select id="conv-select" class="conv-select" aria-label="选择监控的对话">
+          <option value="">🎯 自动跟随当前对话</option>
+        </select>
+        <button id="refresh-btn" type="button" class="icon-btn" title="立即刷新">↻</button>
+      </div>
+
+      <nav class="tabs" role="tablist" aria-label="监控视图">
+        <button type="button" role="tab" class="tab active" data-tab="live" aria-selected="true">实时看板</button>
+        <button type="button" role="tab" class="tab" data-tab="steps" aria-selected="false">
+          步骤明细 <span id="steps-badge" class="tab-badge">0</span>
+        </button>
+        <button type="button" role="tab" class="tab" data-tab="global" aria-selected="false">
+          全局汇总 <span id="global-badge" class="tab-badge">0</span>
+        </button>
+      </nav>
+    </header>
+
+    <main class="content">
+      <!-- Tab 1: 实时看板 -->
+      <section id="tab-live" class="tab-panel active" role="tabpanel">
+        <section id="live-flow-card" class="panel-card flow-card">
+          <div class="panel-head">
+            <span class="panel-title">实时请求流程 &amp; 异常诊断</span>
+            <span id="flow-phase-pill" class="flow-phase-pill phase-idle">空闲</span>
+          </div>
+          <div id="flow-status-banner" class="flow-status-banner">
+            <div class="flow-status-main">等待新请求…</div>
+          </div>
+          <div id="flow-error-box" class="flow-error-box" style="display: none;"></div>
+          <div id="flow-pipeline" class="flow-pipeline"></div>
+        </section>
+
+        <div class="kpi-grid">
+          <article class="kpi-card">
+            <div class="kpi-label">生成速率 (TPS)</div>
+            <div class="kpi-value-row">
+              <span id="kpi-tps" class="kpi-value accent-cyan">0.0</span>
+              <span class="kpi-unit">tok/s</span>
+            </div>
+            <div id="kpi-tps-sub" class="kpi-sub">平均 — · 峰值 —</div>
+          </article>
+
+          <article class="kpi-card">
+            <div class="kpi-label">总输出 Tokens</div>
+            <div class="kpi-value-row">
+              <span id="kpi-output" class="kpi-value accent-emerald">0</span>
+              <span id="kpi-calls-sub" class="kpi-unit">0 次调用</span>
+            </div>
+            <div class="split-bar" title="思考 Tokens vs 正文/工具调用 Tokens">
+              <div id="bar-think" class="split-think" style="width: 0%"></div>
+              <div id="bar-body" class="split-body" style="width: 0%"></div>
+            </div>
+            <div id="kpi-output-sub" class="kpi-sub">思考 0 · 回复 0</div>
+          </article>
+
+          <article class="kpi-card">
+            <div class="kpi-label">上下文 &amp; 输入消耗</div>
+            <div class="kpi-value-row">
+              <span id="kpi-ctx" class="kpi-value">0</span>
+              <span class="kpi-unit">当前窗口</span>
+            </div>
+            <div id="kpi-input-sub" class="kpi-sub">新增 0 · 缓存 0</div>
+          </article>
+
+          <article class="kpi-card">
+            <div class="kpi-label">缓存命中率 &amp; 延迟</div>
+            <div class="kpi-value-row">
+              <span id="kpi-cache" class="kpi-value accent-violet">0%</span>
+              <span id="kpi-ttft-unit" class="kpi-unit">TTFT —</span>
+            </div>
+            <div class="mini-track">
+              <div id="bar-cache" class="mini-fill" style="width: 0%"></div>
+            </div>
+            <div id="kpi-latency-sub" class="kpi-sub">平均单步耗时 —</div>
+          </article>
+        </div>
+
+        <section class="panel-card">
+          <div class="panel-head">
+            <span class="panel-title">本对话模型汇总</span>
+            <span id="model-count-tag" class="mono-tag">—</span>
+          </div>
+          <div id="model-breakdown" class="model-list">
+            <div class="empty-inline">暂无模型调用记录</div>
+          </div>
+        </section>
+
+        <section class="panel-card">
+          <div class="panel-head">
+            <span class="panel-title">每步 TPS 与上下文趋势</span>
+            <span class="legend">
+              <span class="leg-item"><i class="dot dot-cyan"></i>TPS</span>
+              <span class="leg-item"><i class="dot dot-bar"></i>上下文</span>
+            </span>
+          </div>
+          <div id="chart-wrap" class="chart-wrap">
+            <div class="empty-inline">暂无模型调用记录</div>
+          </div>
+        </section>
+
+        <section class="panel-card">
+          <div class="panel-head">
+            <span class="panel-title">各轮对话 &amp; 每步模型实时轨迹</span>
+            <span id="rounds-count-tag" class="mono-tag">—</span>
+          </div>
+          <div id="rounds-timeline" class="rounds-stack">
+            <div class="empty-inline">等待本次对话产生模型响应…</div>
+          </div>
+        </section>
+      </section>
+
+      <!-- Tab 2: 步骤明细 -->
+      <section id="tab-steps" class="tab-panel" role="tabpanel">
+        <div class="toolbar">
+          <input id="step-search" type="search" class="search-input" placeholder="筛选动作、模型或提问…" aria-label="筛选步骤">
+          <select id="step-model-filter" class="sort-select" aria-label="按模型筛选">
+            <option value="">全部模型</option>
+          </select>
+          <select id="step-sort" class="sort-select" aria-label="排序方式">
+            <option value="newest">最新优先</option>
+            <option value="oldest">最早优先</option>
+            <option value="tps">TPS 最高</option>
+            <option value="output">输出最多</option>
+            <option value="duration">耗时最长</option>
+          </select>
+        </div>
+        <div id="steps-list" class="list-stack"></div>
+      </section>
+
+      <!-- Tab 3: 全局汇总 -->
+      <section id="tab-global" class="tab-panel" role="tabpanel">
+        <div class="global-summary" id="global-summary"></div>
+        <div class="section-caption">全部历史对话（点击切换监控目标）</div>
+        <div id="global-list" class="list-stack"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

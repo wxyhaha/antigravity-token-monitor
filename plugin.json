@@ -1,0 +1,15 @@
+{
+  "name": "token-monitor",
+  "displayName": "Token & TPS Monitor",
+  "version": "1.0.0",
+  "description": "Real-time Token consumption, Prompt Cache hit rate, TTFT, and TPS monitor in the Antigravity side pane.",
+  "logo": "assets/logo.svg",
+  "suggestedPrompts": [
+    "打开 Token & TPS 实时监控面板",
+    "查看当前对话的 Token 消耗和 TPS 统计",
+    "汇总所有历史会话的 Token 与缓存命中率"
+  ],
+  "author": {
+    "name": "Antigravity Custom Plugin"
+  }
+}

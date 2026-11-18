@@ -1,0 +1,6 @@
+{
+  "name": "token_dashboard",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Real-time Token & TPS Monitor sidecar for Antigravity"
+}
